@@ -8,15 +8,18 @@ const client = new Discord.Client({ intents: ["MessageContent", "GuildMembers", 
 const sheet = new GoogleSpreadsheet(config.google.sheet)
 let loaded = false;
 
-client.login(config.botToken)
+client.login(config.botToken);
 
 client.on("ready", async () => {
-    console.log("ready")
+    console.log("Bot is ready");
+
     await sheet.useServiceAccountAuth(config.google.creds)
     await sheet.loadInfo();
+
     loaded = true;
-    console.log("loaded")
-    // handle bobby > server
+    console.log("Sheet is loaded")
+
+    // handle sheet > server
     let updatePromises = [];
     let sendPromises = [];
     const doStuff = async (sheetName, id) => {
@@ -26,10 +29,12 @@ client.on("ready", async () => {
         for (const pend of pending) {
             pend.Replied = "Yup";
             // @ts-expect-error
-            sendPromises.push(client.channels.cache.get(id)?.send(`🥔: \`${pend.Reply}\``))
+            sendPromises.push(client.channels.cache.get(id)?.send(`${config.msgPrefix}: \`${pend.Reply}\``))
             updatePromises.push(pend.save())
         }
     }
+
+    // Check sheet for commands every 30 seconds
     setInterval(async () => {
         if (updatePromises.length > 0 || sendPromises.length > 0) return;
         await Promise.all(idsToSheets.map((name, sflk) => doStuff(name, sflk)))
@@ -37,13 +42,13 @@ client.on("ready", async () => {
         await Promise.all(sendPromises)
         updatePromises = [];
         sendPromises = [];
-    }, 0.5 * 60 * 1000)
+    }, 30_000)
 })
 
 /** @param {Discord.Message} msg */
-function replace (msg) {
-    const regex = /<a?(:.+:)\d{10,}>/;
-    return msg.content.replace(regex, (str) => {
+function replace(msg) {
+    const emojiRegex = /<a?(:.+:)\d{10,}>/;
+    return msg.content.replace(emojiRegex, (str) => {
         return str.match(/:[^:<>]+:/)?.[0] ?? ""
     }) || null
 }
@@ -54,32 +59,36 @@ const idsToSheets = new Discord.Collection()
     .set(sf.modDiscussion, "Mod Discussion")
     .set(sf.team, "Team")
 
+
+// handle server > sheet
 client.on("messageCreate", async (msg) => {
-    // handle server > bobby
     if (msg.author.bot || msg.author.system || msg.webhookId || !loaded) return;
-    const name = idsToSheets.get(msg.channelId);
-    if (!name) return;
-    const dev = sheet.sheetsByTitle[name];
-    if (!dev) return;
+
+    const sheetName = idsToSheets.get(msg.channelId);
+    if (!sheetName) return;
+
+    const worksheet = sheet.sheetsByTitle[sheetName];
+    if (!worksheet) return;
 
     // @ts-ignore
-    dev.addRows([{
+    worksheet.addRows([{
         Author: msg.author.displayName,
         "Sent At": msg.createdTimestamp,
         Content: replace(msg) || "Attachment"
     }])
 })
 
-// LAST DITCH ERROR HANDLING
-process.on("unhandledRejection", (error, p) => p.catch(e => errorHandler(e, "Unhandled Rejection")));
-process.on("uncaughtException", (error) => errorHandler(error, "Uncaught Exception"));
 
-  /**
-   * Handles a command exception/error. Most likely called from a catch.
-   * Reports the error and lets the user know.
-   * @param {Error | null} [error] The error to report.
-   * @param {any} message Any Discord.Message, Discord.BaseInteraction, or text string.
-   */
+/******************
+ * ERROR HANDLING *
+ ******************/
+
+/**
+ * Handles a command exception/error. Most likely called from a catch.
+ * Reports the error and lets the user know.
+ * @param {Error | null} [error] The error to report.
+ * @param {any} message Any Discord.Message, Discord.BaseInteraction, or text string.
+ */
 async function errorHandler(error, message = null) {
     if (!error || (error.name === "AbortError")) return;
 
@@ -88,17 +97,17 @@ async function errorHandler(error, message = null) {
     const embed = new Discord.EmbedBuilder({ color: 0x427654}).setTitle(error?.name?.toString() ?? "Error");
 
     if (message instanceof Discord.Message) {
-      const loc = (message.inGuild() ? `${message.guild?.name} > ${message.channel?.name}` : "DM");
-      console.error(`${message.author.username} in ${loc}: ${message.cleanContent}`);
+        const loc = (message.inGuild() ? `${message.guild?.name} > ${message.channel?.name}` : "DM");
+        console.error(`${message.author.username} in ${loc}: ${message.cleanContent}`);
 
-      embed.addFields(
-        { name: "User", value: message.author.username, inline: true },
-        { name: "Location", value: loc, inline: true },
-        { name: "Command", value: message.cleanContent || "`undefined`", inline: true }
-      );
+        embed.addFields(
+            { name: "User", value: message.author.username, inline: true },
+            { name: "Location", value: loc, inline: true },
+            { name: "Command", value: message.cleanContent || "`undefined`", inline: true }
+        );
     } else if (typeof message === "string") {
-      console.error(message);
-      embed.addFields({ name: "Message", value: message });
+        console.error(message);
+        embed.addFields({ name: "Message", value: message });
     }
 
     console.trace(error);
@@ -109,3 +118,7 @@ async function errorHandler(error, message = null) {
     embed.setDescription(stack);
     return new Discord.WebhookClient({ url: config.errorHook }).send({ embeds: [embed], username: "Bobby's Window Errors", avatarURL: "https://www.thompsoncreek.com/wp-content/uploads/2021/05/shutterstock_315289424-scaled.jpg" });
 }
+
+// LAST DITCH ERROR HANDLING
+process.on("unhandledRejection", (error, p) => p.catch(e => errorHandler(e, "Unhandled Rejection")));
+process.on("uncaughtException", (error) => errorHandler(error, "Uncaught Exception"));
