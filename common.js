@@ -13,8 +13,24 @@ function isLoaded() {
     return loaded;
 }
 
-function setIsLoaded() {
-    loaded = true;
+async function loadSheet(attempt = 0) {
+    try {
+        await sheet.useServiceAccountAuth(config.google.creds);
+        await sheet.loadInfo();
+
+        loaded = true;
+    } catch (error) {
+        if (attempt > 4) {
+            console.error("Couldn't load sheet info.");
+            process.exit();
+        }
+
+        console.log(`Couldn't load sheet info (Attempt ${attempt + 1}). Retrying in 1 minute...`);
+
+        setTimeout(() => {
+            loadSheet(attempt + 1);
+        }, 60_000);
+    }
 }
 
 const idsToSheets = new Discord.Collection()
@@ -27,5 +43,5 @@ module.exports = {
     sheet,
     idsToSheets,
     isLoaded,
-    setIsLoaded
+    loadSheet
 };

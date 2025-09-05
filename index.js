@@ -8,26 +8,17 @@ const client = new Augur.AugurClient({
     events: ["messageCreate", "guildUpdate", "guildMemberUpdate"],
     ownerId: config.ownerId,
     token: config.botToken,
-    prefix: config.prefix
+    prefix: config.prefix,
 }, {
     clientOptions: {
         allowedMentions: { parse: ["roles", "users"] },
         failIfNotExists: false
     },
+    delayStart: u.loadSheet,
     modules: "modules"
 });
 
 client.login(config.botToken);
-
-client.on("ready", async () => {
-    console.log("Bot is ready");
-
-    await u.sheet.useServiceAccountAuth(config.google.creds);
-    await u.sheet.loadInfo();
-
-    u.setIsLoaded();
-    console.log("Sheet is loaded");
-});
 
 
 /******************
