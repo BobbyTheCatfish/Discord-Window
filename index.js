@@ -1,10 +1,23 @@
 // @ts-check
+const Augur = require("augurbot-ts");
 const Discord = require("discord.js");
 const { GoogleSpreadsheet } = require("google-spreadsheet");
 const config = require("./config.json");
 const sf = require("./sf.json");
 
-const client = new Discord.Client({ intents: ["MessageContent", "GuildMembers", "GuildMessages", "Guilds", "DirectMessages"], allowedMentions: { parse: ['roles', 'users'] } });
+const client = new Augur.AugurClient({
+    events: ["messageCreate", "guildUpdate", "guildMemberUpdate"],
+    ownerId: config.ownerId,
+    token: config.botToken,
+    prefix: config.prefix
+}, {
+    clientOptions: {
+        allowedMentions: { parse: ["roles", "users"] },
+        failIfNotExists: false
+    },
+    modules: "modules"
+});
+
 const sheet = new GoogleSpreadsheet(config.google.sheet);
 let loaded = false;
 

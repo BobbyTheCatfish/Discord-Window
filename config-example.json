@@ -6,5 +6,6 @@
     },
     "errorHook": "",
     "prefix": "!",
-    "msgPrefix": "🥔:"
+    "msgPrefix": "🥔:",
+    "ownerId": ""
 }
