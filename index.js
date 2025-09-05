@@ -1,64 +1,63 @@
 // @ts-check
-const Discord = require("discord.js")
+const Discord = require("discord.js");
 const { GoogleSpreadsheet } = require("google-spreadsheet");
 const config = require("./config.json");
-const sf = require("./sf.json")
+const sf = require("./sf.json");
 
-const client = new Discord.Client({ intents: ["MessageContent", "GuildMembers", "GuildMessages", "Guilds", "DirectMessages"], allowedMentions: { parse: ['roles', 'users']} })
-const sheet = new GoogleSpreadsheet(config.google.sheet)
+const client = new Discord.Client({ intents: ["MessageContent", "GuildMembers", "GuildMessages", "Guilds", "DirectMessages"], allowedMentions: { parse: ['roles', 'users'] } });
+const sheet = new GoogleSpreadsheet(config.google.sheet);
 let loaded = false;
+
+const idsToSheets = new Discord.Collection()
+    .set(sf.icarusDev, "Icarus Dev")
+    .set(sf.logistics, "Logistics")
+    .set(sf.modDiscussion, "Mod Discussion")
+    .set(sf.team, "Team");
 
 client.login(config.botToken);
 
 client.on("ready", async () => {
     console.log("Bot is ready");
 
-    await sheet.useServiceAccountAuth(config.google.creds)
+    await sheet.useServiceAccountAuth(config.google.creds);
     await sheet.loadInfo();
 
     loaded = true;
-    console.log("Sheet is loaded")
+    console.log("Sheet is loaded");
 
     // handle sheet > server
     let updatePromises = [];
     let sendPromises = [];
     const doStuff = async (sheetName, id) => {
         // @ts-ignore
-        const chanSheet = await sheet.sheetsByTitle[sheetName].getRows()
-        const pending = chanSheet.filter(c => c["Reply"] && c["Ready"] && !c["Replied"])
+        const chanSheet = await sheet.sheetsByTitle[sheetName].getRows();
+        const pending = chanSheet.filter(c => c.Reply && c.Ready && !c.Replied);
         for (const pend of pending) {
             pend.Replied = "Yup";
             // @ts-expect-error
-            sendPromises.push(client.channels.cache.get(id)?.send(`${config.msgPrefix}: \`${pend.Reply}\``))
-            updatePromises.push(pend.save())
+            sendPromises.push(client.channels.cache.get(id)?.send(`${config.msgPrefix}: \`${pend.Reply}\``));
+            updatePromises.push(pend.save());
         }
-    }
+    };
 
     // Check sheet for commands every 30 seconds
     setInterval(async () => {
         if (updatePromises.length > 0 || sendPromises.length > 0) return;
-        await Promise.all(idsToSheets.map((name, sflk) => doStuff(name, sflk)))
-        await Promise.all(updatePromises)
-        await Promise.all(sendPromises)
+        await Promise.all(idsToSheets.map((name, sflk) => doStuff(name, sflk)));
+        await Promise.all(updatePromises);
+        await Promise.all(sendPromises);
         updatePromises = [];
         sendPromises = [];
-    }, 30_000)
-})
+    }, 30_000);
+});
 
 /** @param {Discord.Message} msg */
 function replace(msg) {
     const emojiRegex = /<a?(:.+:)\d{10,}>/;
     return msg.content.replace(emojiRegex, (str) => {
-        return str.match(/:[^:<>]+:/)?.[0] ?? ""
-    }) || null
+        return str.match(/:[^:<>]+:/)?.[0] ?? "";
+    }) || null;
 }
-
-const idsToSheets = new Discord.Collection()
-    .set(sf.icarusDev, "Icarus Dev")
-    .set(sf.logistics, "Logistics")
-    .set(sf.modDiscussion, "Mod Discussion")
-    .set(sf.team, "Team")
-
 
 // handle server > sheet
 client.on("messageCreate", async (msg) => {
@@ -75,8 +74,8 @@ client.on("messageCreate", async (msg) => {
         Author: msg.author.displayName,
         "Sent At": msg.createdTimestamp,
         Content: replace(msg) || "Attachment"
-    }])
-})
+    }]);
+});
 
 
 /******************
@@ -94,7 +93,7 @@ async function errorHandler(error, message = null) {
 
     console.error(Date());
 
-    const embed = new Discord.EmbedBuilder({ color: 0x427654}).setTitle(error?.name?.toString() ?? "Error");
+    const embed = new Discord.EmbedBuilder({ color: 0x427654 }).setTitle(error?.name?.toString() ?? "Error");
 
     if (message instanceof Discord.Message) {
         const loc = (message.inGuild() ? `${message.guild?.name} > ${message.channel?.name}` : "DM");
