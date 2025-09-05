@@ -7,5 +7,6 @@
     "errorHook": "",
     "prefix": "!",
     "msgPrefix": "🥔:",
-    "ownerId": ""
+    "ownerId": "",
+    "devMode": true
 }

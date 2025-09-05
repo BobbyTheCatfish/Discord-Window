@@ -1,9 +1,8 @@
 // @ts-check
 const Augur = require("augurbot-ts");
 const Discord = require("discord.js");
-const { GoogleSpreadsheet } = require("google-spreadsheet");
+const u = require("./common");
 const config = require("./config.json");
-const sf = require("./sf.json");
 
 const client = new Augur.AugurClient({
     events: ["messageCreate", "guildUpdate", "guildMemberUpdate"],
@@ -18,24 +17,15 @@ const client = new Augur.AugurClient({
     modules: "modules"
 });
 
-const sheet = new GoogleSpreadsheet(config.google.sheet);
-let loaded = false;
-
-const idsToSheets = new Discord.Collection()
-    .set(sf.icarusDev, "Icarus Dev")
-    .set(sf.logistics, "Logistics")
-    .set(sf.modDiscussion, "Mod Discussion")
-    .set(sf.team, "Team");
-
 client.login(config.botToken);
 
 client.on("ready", async () => {
     console.log("Bot is ready");
 
-    await sheet.useServiceAccountAuth(config.google.creds);
-    await sheet.loadInfo();
+    await u.sheet.useServiceAccountAuth(config.google.creds);
+    await u.sheet.loadInfo();
 
-    loaded = true;
+    u.setIsLoaded();
     console.log("Sheet is loaded");
 
     // handle sheet > server
@@ -43,7 +33,7 @@ client.on("ready", async () => {
     let sendPromises = [];
     const doStuff = async (sheetName, id) => {
         // @ts-ignore
-        const chanSheet = await sheet.sheetsByTitle[sheetName].getRows();
+        const chanSheet = await u.sheet.sheetsByTitle[sheetName].getRows();
         const pending = chanSheet.filter(c => c.Reply && c.Ready && !c.Replied);
         for (const pend of pending) {
             pend.Replied = "Yup";
@@ -56,38 +46,12 @@ client.on("ready", async () => {
     // Check sheet for commands every 30 seconds
     setInterval(async () => {
         if (updatePromises.length > 0 || sendPromises.length > 0) return;
-        await Promise.all(idsToSheets.map((name, sflk) => doStuff(name, sflk)));
+        await Promise.all(u.idsToSheets.map((name, sflk) => doStuff(name, sflk)));
         await Promise.all(updatePromises);
         await Promise.all(sendPromises);
         updatePromises = [];
         sendPromises = [];
     }, 30_000);
-});
-
-/** @param {Discord.Message} msg */
-function replace(msg) {
-    const emojiRegex = /<a?(:.+:)\d{10,}>/;
-    return msg.content.replace(emojiRegex, (str) => {
-        return str.match(/:[^:<>]+:/)?.[0] ?? "";
-    }) || null;
-}
-
-// handle server > sheet
-client.on("messageCreate", async (msg) => {
-    if (msg.author.bot || msg.author.system || msg.webhookId || !loaded) return;
-
-    const sheetName = idsToSheets.get(msg.channelId);
-    if (!sheetName) return;
-
-    const worksheet = sheet.sheetsByTitle[sheetName];
-    if (!worksheet) return;
-
-    // @ts-ignore
-    worksheet.addRows([{
-        Author: msg.author.displayName,
-        "Sent At": msg.createdTimestamp,
-        Content: replace(msg) || "Attachment"
-    }]);
 });
 
 
