@@ -1,0 +1,9 @@
+{
+    "botToken": "",
+    "google": {
+        "sheet": "",
+        "creds": {}
+    },
+    "errorHook": "",
+    "prefix": "!"
+}
