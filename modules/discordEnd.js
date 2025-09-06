@@ -1,15 +1,6 @@
 // @ts-check
 const Augur = require("augurbot-ts");
-const Discord = require("discord.js");
 const u = require("../common");
-
-/** @param {Discord.Message} msg */
-function replace(msg) {
-    const emojiRegex = /<a?(:.+:)\d{10,}>/;
-    return msg.content.replace(emojiRegex, (str) => {
-        return str.match(/:[^:<>]+:/)?.[0] ?? "";
-    }) || null;
-}
 
 const Module = new Augur.Module()
 .addCommand({
@@ -34,7 +25,7 @@ const Module = new Augur.Module()
     worksheet.addRows([{
         Author: msg.author.displayName,
         "Sent At": msg.createdTimestamp,
-        Content: replace(msg) || "Attachment"
+        Content: u.replace(msg) || "Attachment"
     }]);
 });
 
