@@ -69,5 +69,5 @@ Module.setClockwork(() => {
         await Promise.all(sendPromises);
         updatePromises = [];
         sendPromises = [];
-    }, 30_000);
+    }, config.pollRateSeoonds * 1000);
 });
