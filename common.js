@@ -45,11 +45,13 @@ function isPaused() {
     return paused;
 }
 
-const idsToSheets = new Discord.Collection()
-    .set(sf.icarusDev, { id: sf.icarusDev, name: "Icarus Dev" })
-    .set(sf.logistics, { id: sf.logistics, name: "Logistics" })
-    .set(sf.modDiscussion, { id: sf.modDiscussion, name: "Mod Discussion" })
-    .set(sf.team, { id: sf.team, name: "Team" });
+const idsToSheets = new Discord.Collection([
+    [sf.icarusDev, { id: sf.icarusDev, name: "Icarus Dev", sheet: "Icarus Dev" }],
+    [sf.logistics, { id: sf.logistics, name: "Logistics", sheet: "Logistics" }],
+    [sf.modDiscussion, { id: sf.modDiscussion, name: "Mod Discussion", sheet: "Mod Discussion" }],
+    [sf.team, { id: sf.team, name: "Team", sheet: "Team" }],
+    ["b", { id: "b", name: "Other", sheet: "Other" }]
+]);
 
 /** @param {moment.MomentInput} [t] */
 const time = (t) => moment(t).tz("America/Denver").format("MMMM Do @ h:mm A");
@@ -94,6 +96,7 @@ function mapMessage(msg) {
 }
 
 module.exports = {
+    sf,
     sheet,
     idsToSheets,
     isLoaded,
@@ -103,5 +106,6 @@ module.exports = {
     avatar,
     header,
     replace,
-    mapMessage
+    mapMessage,
+    time
 };
