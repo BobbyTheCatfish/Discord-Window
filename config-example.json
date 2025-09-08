@@ -8,5 +8,6 @@
     "prefix": "!",
     "msgPrefix": "🥔:",
     "ownerId": "",
-    "devMode": true
+    "devMode": true,
+    "pollRateSeconds": 30 
 }
