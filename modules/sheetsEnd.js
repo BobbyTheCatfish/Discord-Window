@@ -123,24 +123,56 @@ const commands = {
 
 Module.setClockwork(() => {
     let sendPromises = [];
-    const doStuff = async (sheetName, id) => {
+    const doStuff = async (sheetName, isBuiltIn) => {
         // @ts-ignore
         const chanSheet = await u.sheet.sheetsByTitle[sheetName].getRows();
-        const pending = chanSheet.filter(c => c.Reply && c.Ready && !c.Replied);
-        for (const pend of pending) {
-            pend.Replied = "Yup";
-            // @ts-expect-error
-            sendPromises.push(Module.client.channels.cache.get(id)?.send(`${config.msgPrefix}: \`${pend.Reply}\``));
-            updatePromises.push(pend.save());
+        const cmds = chanSheet?.filter(c => c.Command && !c.Response) ?? [];
+
+        for (const cmd of cmds) {
+            const run = commands[cmd.Command](sheetName, chanSheet, cmd);
+            cmd.Response = run ? typeof run === "string" ? run : '[Processing]' : '[Not Found]';
+            sendPromises.push(cmd.save());
+        }
+
+        if (u.isPaused() || !isBuiltIn) return;
+
+        const hour = moment().tz("America/Denver").hour();
+        if (hour < 5) return;
+
+        const toSend = chanSheet.filter(c => c.Reply && c.Ready && !c.Replied);
+        for (const row of toSend) {
+            const og = row.Message;
+            row.Message = `${u.header()}\n${og}`;
+            row.PFP = u.avatar(Module.client, config.ownerId);
+
+            const channel = getChannel(sheetName, row);
+            if (typeof channel === "string") {
+                row.Replied = channel;
+                await row.save();
+            } else {
+                const send = channel.send(`${config.msgPrefix}: \`${row.Reply}\``)
+                    .then(async (msg) => {
+                        row.MessageID = msg.id;
+                        await row.save();
+                    })
+                    .catch(async () => {
+                        row.Replied = "[Encountered Error]";
+                        await row.save();
+                    });
+                sendPromises.push(send);
+            }
+            row.Replied = "[Sent]";
         }
     };
 
     return setInterval(async () => {
-        if (updatePromises.length > 0 || sendPromises.length > 0) return;
-        await Promise.all(u.idsToSheets.map((name, sflk) => doStuff(name, sflk)));
-        await Promise.all(updatePromises);
-        await Promise.all(sendPromises);
-        updatePromises = [];
+        if (!u.isLoaded()) return;
+        if (sendPromises.length > 0) return;
+        await Promise.all(u.idsToSheets.map((sheet) => doStuff(sheet.name, sheet.sheet !== "Other")));
+
+        if (sendPromises.length > 0) {
+            await Promise.all(sendPromises);
+        }
         sendPromises = [];
     }, config.pollRateSeoonds * 1000);
 });
