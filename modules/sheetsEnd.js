@@ -175,4 +175,9 @@ Module.setClockwork(() => {
         }
         sendPromises = [];
     }, config.pollRateSeoonds * 1000);
+})
+.addEvent("ready", () => {
+    setTimeout(() => {
+        process.exit();
+    }, 24 * 60 * 60_000);
 });
