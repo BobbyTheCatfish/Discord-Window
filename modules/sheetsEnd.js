@@ -174,7 +174,7 @@ Module.setClockwork(() => {
             await Promise.all(sendPromises);
         }
         sendPromises = [];
-    }, config.pollRateSeoonds * 1000);
+    }, config.pollRateSeconds * 1000);
 })
 .addEvent("ready", () => {
     setTimeout(() => {
