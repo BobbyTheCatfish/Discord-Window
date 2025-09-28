@@ -8,13 +8,12 @@ const config = require("../config.json");
 const Module = new Augur.Module();
 
 /**
- * @typedef {Record<string, string>} Row
- * @typedef {(name: string, rows: Row[], row: Row) => string | boolean} Command
+ * @typedef {(name: string, rows: u.Row[], row: u.Row) => string | boolean} Command
  */
 
 /**
  * @param {string} sheetName
- * @param {Row} row
+ * @param {u.Row} row
  * @returns {string | Discord.GuildTextBasedChannel}
  */
 function getChannel(sheetName, row) {
@@ -122,46 +121,51 @@ const commands = {
 };
 
 Module.setClockwork(() => {
+    /** @type {Promise<any>[]} */
     let sendPromises = [];
+    /**
+     * @param {string} sheetName
+     * @param {boolean} isBuiltIn
+     */
     const doStuff = async (sheetName, isBuiltIn) => {
+        /** @type {u.Row[]} */
         // @ts-ignore
         const chanSheet = await u.sheet.sheetsByTitle[sheetName].getRows();
-        const cmds = chanSheet?.filter(c => c.Command && !c.Response) ?? [];
 
-        for (const cmd of cmds) {
-            const run = commands[cmd.Command](sheetName, chanSheet, cmd);
-            cmd.Response = run ? typeof run === "string" ? run : '[Processing]' : '[Not Found]';
-            sendPromises.push(cmd.save());
-        }
+        const hourCheck = moment().tz("America/Denver").hour() < 5;
 
-        if (u.isPaused() || !isBuiltIn) return;
-
-        const hour = moment().tz("America/Denver").hour();
-        if (hour < 5) return;
-
-        const toSend = chanSheet.filter(c => c.Reply && c.Ready && !c.Replied);
-        for (const row of toSend) {
-            const og = row.Message;
-            row.Message = `${u.header()}\n${og}`;
-            row.PFP = u.avatar(Module.client, config.ownerId);
-
-            const channel = getChannel(sheetName, row);
-            if (typeof channel === "string") {
-                row.Replied = channel;
-                await row.save();
-            } else {
-                const send = channel.send(`${config.msgPrefix}: \`${row.Reply}\``)
-                    .then(async (msg) => {
-                        row.MessageID = msg.id;
-                        await row.save();
-                    })
-                    .catch(async () => {
-                        row.Replied = "[Encountered Error]";
-                        await row.save();
-                    });
-                sendPromises.push(send);
+        for (const row of chanSheet) {
+            let changed = false;
+            if (row.Command && !row.Response) {
+                const run = commands[row.Command](sheetName, chanSheet, row);
+                row.Response = run ? typeof run === "string" ? run : '[Processing]' : '[Not Found]';
+                changed = true;
             }
-            row.Replied = "[Sent]";
+
+            if (!u.isPaused() && isBuiltIn && !hourCheck && row.Message && !row.MessageID && !row.PFP) {
+                const ogMessage = row.Message;
+                row.Message = `${u.header()}\n${ogMessage}`;
+                row.PFP = u.avatar(Module.client, config.ownerId);
+
+                const channel = getChannel(sheetName, row);
+                if (typeof channel === "string") {
+                    row.MessageID = channel;
+                    await row.save();
+                } else {
+                    const send = channel.send(`${config.msgPrefix}: \`${ogMessage}\``)
+                        .then(async (msg) => {
+                            row.MessageID = msg.id;
+                            changed = true;
+                        })
+                        .catch(async () => {
+                            row.MessageID = "[Encountered Error]";
+                            await row.save();
+                        });
+                    sendPromises.push(send);
+                }
+            }
+            if (changed) sendPromises.push(row.save());
+
         }
     };
 
