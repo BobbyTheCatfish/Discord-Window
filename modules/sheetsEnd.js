@@ -91,6 +91,7 @@ function unfollow(name, rows, row) {
     return "[Followed]";
 }
 
+/** @type {Command} */
 function following() {
     return u.idsToSheets.map(s => s.name).join("\n") || "None";
 }

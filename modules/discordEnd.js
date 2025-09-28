@@ -34,14 +34,14 @@ const Module = new Augur.Module()
     // @ts-expect-error
     if (attachents.length > 0) u.sheet.sheetsByTitle[sheetInfo.sheet].addRows(attachents.map(a => ({ Message: `=IMAGE("${a}")`, MessageID: msg.id, ChannelID: msg.channel.id, Channel: msg.channel.name, PFP: u.avatar(Module, msg.author.id) })));
 })
-.addEvent("ready", async () => {
+.addEvent("ready", async (cli) => {
     /** @type {{ID: string, Channel: string}[]} */
     // @ts-ignore
     const existingChannels = await u.sheet.sheetsByTitle.Channels.getRows();
     const existingChannelCollection = new Discord.Collection(existingChannels.map(c => [c.ID, c]));
 
     const mainServer = await Module.client.guilds.fetch(u.sf.mainServer);
-    const channels = mainServer.channels.cache.filter(c => c.isTextBased() && !c.isVoiceBased());
+    const channels = mainServer.channels.cache.filter(c => c.isTextBased() && !c.isVoiceBased() && c.permissionsFor(cli.user.id)?.has("ViewChannel"));
 
     const diff = channels.subtract(existingChannelCollection);
     if (diff.size === 0) return;
