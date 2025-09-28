@@ -31,8 +31,12 @@ const Module = new Augur.Module()
     if (msg.stickers.size > 0) attachents.push(msg.stickers.first()?.url ?? "STICKER");
     if (msg.attachments.size > 0) attachents = attachents.concat(msg.attachments.map(a => a.url));
 
-    // @ts-expect-error
-    if (attachents.length > 0) u.sheet.sheetsByTitle[sheetInfo.sheet].addRows(attachents.map(a => ({ Message: `=IMAGE("${a}")`, MessageID: msg.id, ChannelID: msg.channel.id, Channel: msg.channel.name, PFP: u.avatar(Module, msg.author.id) })));
+    if (attachents.length > 0) {
+        /** @type {u.RowProps[]} */
+        const payload = attachents.map(a => ({ Message: `=IMAGE("${a}")`, MessageID: msg.id, ChannelID: msg.channel.id, Channel: msg.channel.name, PFP: u.avatar(Module.client, msg.author.id) }));
+        // @ts-expect-error
+        u.sheet.sheetsByTitle[sheetInfo.sheet].addRows(payload);
+    }
 })
 .addEvent("ready", async (cli) => {
     /** @type {{ID: string, Channel: string}[]} */

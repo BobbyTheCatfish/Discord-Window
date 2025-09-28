@@ -80,7 +80,10 @@ function replace(msg) {
     }) || null;
 }
 
-/** @param {Discord.Message<true>} msg  */
+/**
+ * @param {Discord.Message<true>} msg
+ * @returns {RowProps[]}
+ */
 function mapMessage(msg) {
     let rows = [`${header(msg)}\n${replace(msg)}`];
     rows.push();
