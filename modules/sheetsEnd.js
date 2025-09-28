@@ -33,7 +33,7 @@ function fetch(name, rows, row) {
     const channel = getChannel(name, row);
     if (typeof channel === "string") return channel;
 
-    channel.messages.fetch({ limit: 50 }).then(msgs => {
+    channel.messages.fetch({ limit: 50, before: row.MessageID || undefined }).then(msgs => {
         const newRows = msgs.filter(m => !rows.find(r => r.MessageID === m.id))
             .map(m => u.mapMessage(m).reverse())
             .reverse()
