@@ -1,5 +1,5 @@
 // @ts-check
-const { GoogleSpreadsheet } = require("google-spreadsheet");
+const { GoogleSpreadsheet, GoogleSpreadsheetRow } = require("google-spreadsheet");
 const Discord = require("discord.js");
 const moment = require("moment-timezone");
 const config = require("./config.json");
@@ -8,6 +8,7 @@ const sft = require("./sft.json");
 const sf = config.devMode ? sft : sfr;
 
 const sheet = new GoogleSpreadsheet(config.google.sheet);
+/** @type {boolean} */
 let loaded;
 
 function isLoaded() {
@@ -109,3 +110,16 @@ module.exports = {
     mapMessage,
     time
 };
+
+/**
+ * @typedef RowProps
+ * @prop {string} PFP
+ * @prop {string} Message
+ * @prop {string} [MessageID]
+ * @prop {string} [Command]
+ * @prop {string} [Response]
+ * @prop {string} [Channel]
+ * @prop {string} [ChannelID]
+ *
+ * @typedef {GoogleSpreadsheetRow & RowProps} Row
+ */
