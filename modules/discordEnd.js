@@ -35,6 +35,7 @@ const Module = new Augur.Module()
     if (attachents.length > 0) u.sheet.sheetsByTitle[sheetInfo.sheet].addRows(attachents.map(a => ({ Message: `=IMAGE("${a}")`, MessageID: msg.id, ChannelID: msg.channel.id, Channel: msg.channel.name, PFP: u.avatar(Module, msg.author.id) })));
 })
 .addEvent("ready", async () => {
+    /** @type {{ID: string, Channel: string}[]} */
     // @ts-ignore
     const existingChannels = await u.sheet.sheetsByTitle.Channels.getRows();
     const existingChannelCollection = new Discord.Collection(existingChannels.map(c => [c.ID, c]));
